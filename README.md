@@ -59,3 +59,7 @@ configurada, não precisa mexer nela de novo.
    a chave depois do primeiro deploy não atualiza sozinho.
 3. Se ainda der erro, veja **Deployments > (clique no deployment) >
    Functions/Logs** — lá aparece a mensagem de erro exata.
+4. Com a versão mais recente destes arquivos, qualquer erro mostra uma
+   mensagem específica na tela do chat (não mais um texto genérico) —
+   use essa mensagem para identificar o problema mais rápido.
+

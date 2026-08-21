@@ -70,13 +70,37 @@ Quando houver intenção de reserva ou necessidade de confirmar valores/disponib
 module.exports = async function handler(req, res) {
   // Só aceita requisições do tipo POST (envio de mensagem)
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Método não permitido' });
+    res.status(405).json({ error: 'Método não permitido' });
+    return;
+  }
+
+  // Confere se a chave da API está configurada nas variáveis de ambiente da Vercel
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.error('ANTHROPIC_API_KEY não está configurada nas variáveis de ambiente.');
+    res.status(500).json({ error: 'Chave da API não configurada no servidor. Verifique as Environment Variables na Vercel.' });
+    return;
+  }
+
+  // Garante que o corpo da requisição foi lido corretamente, mesmo se
+  // a Vercel não fizer o parse automático em algum cenário
+  let body = req.body;
+  if (typeof body === 'string') {
+    try {
+      body = JSON.parse(body);
+    } catch (e) {
+      res.status(400).json({ error: 'Não consegui entender a mensagem enviada.' });
+      return;
+    }
+  }
+
+  const messages = body && body.messages;
+  if (!Array.isArray(messages) || messages.length === 0) {
+    res.status(400).json({ error: 'Nenhuma mensagem recebida.' });
+    return;
   }
 
   try {
-    const { messages } = req.body;
-
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -84,25 +108,34 @@ module.exports = async function handler(req, res) {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
+        model: 'claude-sonnet-5',
         max_tokens: 1000,
         system: SYSTEM_PROMPT,
         messages: messages,
       }),
     });
 
-    const data = await response.json();
+    const rawText = await anthropicResponse.text();
+    let data;
+    try {
+      data = JSON.parse(rawText);
+    } catch (e) {
+      console.error('Resposta da Anthropic não era JSON válido:', rawText);
+      res.status(502).json({ error: 'Resposta inesperada do servidor de IA. Tente novamente em instantes.' });
+      return;
+    }
 
-    if (!response.ok) {
+    if (!anthropicResponse.ok) {
       console.error('Erro da API Anthropic:', data);
-      return res.status(response.status).json({
-        error: data.error?.message || 'Erro ao conectar com o assistente',
+      res.status(anthropicResponse.status).json({
+        error: (data.error && data.error.message) || 'Erro ao conectar com o assistente',
       });
+      return;
     }
 
     res.status(200).json(data);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Erro ao conectar com o assistente' });
+    console.error('Erro inesperado na função /api/chat:', err);
+    res.status(500).json({ error: 'Erro inesperado ao conectar com o assistente. Tente novamente.' });
   }
 };

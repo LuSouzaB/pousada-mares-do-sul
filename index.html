@@ -180,7 +180,16 @@ async function sendMessage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ messages: history })
     });
-    const data = await response.json();
+    const rawText = await response.text();
+    let data;
+    try {
+      data = JSON.parse(rawText);
+    } catch (parseErr) {
+      typingDiv.remove();
+      addMessage('Erro: o servidor respondeu de forma inesperada (status ' + response.status + '). Confira o deployment na Vercel.', 'bot');
+      console.error('Resposta não era JSON:', rawText);
+      return;
+    }
     if (!response.ok) {
       typingDiv.remove();
       addMessage('Erro: ' + (data.error || 'não consegui conectar com o assistente.'), 'bot');
@@ -193,7 +202,7 @@ async function sendMessage() {
     history.push({ role: 'assistant', content: reply });
   } catch (err) {
     typingDiv.remove();
-    addMessage('Erro ao conectar. Tente novamente.', 'bot');
+    addMessage('Erro de rede ao conectar. Verifique sua internet e tente novamente.', 'bot');
     console.error(err);
   } finally {
     sendBtn.disabled = false;
