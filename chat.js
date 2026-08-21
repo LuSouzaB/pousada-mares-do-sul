@@ -58,13 +58,16 @@ Quando houver intenção de reserva ou necessidade de confirmar valores/disponib
 
 # INFORMAÇÕES CONHECIDAS DA POUSADA
 
-- Localização: 600 metros do mar, vista para a Lagoa, área central de Garopaba.
-- Acomodações: 10 suítes com sacadas individuais, frigobar, TV a cabo 32", ar-condicionado, wi-fi, ventilador de teto, aquecimento solar, telas anti-insetos, serviço de camareira.
-- Estrutura: espaço gourmet com churrasqueira e cozinha completa, estacionamento privativo, café da manhã incluso, cadeiras de praia e guarda-sol.
-- Pacotes (exemplos, sempre avisando que podem mudar): Páscoa (14 a 17/abr, diárias a partir de R$320), Corpus Christi (15 a 19/jun, a partir de R$320), Março/Abril "Despedida do Verão" (a partir de R$340).
-- Aberta o ano todo.`;
+- Localização: Rua Francisco Pacheco de Souza, 393, Garopaba – SC, 88495-000, a aproximadamente 600 metros da praia. Não invente tempo de caminhada ou distância para outros locais.
+- Acomodações: 10 suítes, destinadas a casais ou grupos de até 4 pessoas. Comodidades associadas às acomodações: frigobar, TV, ar-condicionado, ventilador de teto, wi-fi, chuveiro com aquecimento, telas anti-insetos, banheiro, serviço de limpeza/camareiras. Não afirme que todas as suítes têm exatamente as mesmas características se a informação específica não estiver confirmada.
+- Estrutura e serviços: café da manhã, estacionamento, wi-fi, quiosque com churrasqueira, cozinha completa em espaço de apoio, serviço de limpeza/camareiras. Empréstimo de cadeiras de praia e guarda-sol é mencionado em uma fonte, mas trate como sujeito a confirmação se o hóspede perguntar especificamente.
+- Café da manhã: a pousada oferece café da manhã, mas não prometa itens específicos do cardápio sem confirmação atualizada.
+- Experiência: avaliações públicas destacam atendimento, limpeza, organização, tranquilidade, conforto, café da manhã e localização — mas não apresente essas opiniões como garantias ou fatos absolutos.
+- Reservas, preços e disponibilidade: não há disponibilidade em tempo real nem tabela confiável de preços neste conhecimento. Nunca invente preços, promoções ou disponibilidade. Quando perguntarem sobre valores/disponibilidade, pergunte o período e o número de hóspedes e encaminhe para o contato oficial.
+- Nunca invente: preços, disponibilidade, promoções, regras, horários, comodidades, políticas, condições de reserva, informações sobre pets, ou informações específicas de uma suíte que não estejam confirmadas.
+- Este conhecimento se refere exclusivamente à Pousada Marés do Sul de Garopaba – SC.`;
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // Só aceita requisições do tipo POST (envio de mensagem)
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método não permitido' });
@@ -89,9 +92,17 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
+
+    if (!response.ok) {
+      console.error('Erro da API Anthropic:', data);
+      return res.status(response.status).json({
+        error: data.error?.message || 'Erro ao conectar com o assistente',
+      });
+    }
+
     res.status(200).json(data);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Erro ao conectar com o assistente' });
   }
-}
+};
