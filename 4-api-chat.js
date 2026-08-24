@@ -75,14 +75,12 @@ module.exports = async function handler(req, res) {
   }
 
   // Confere se a chave da API está configurada nas variáveis de ambiente da Vercel
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.error('ANTHROPIC_API_KEY não está configurada nas variáveis de ambiente.');
+  if (!process.env.GROQ_API_KEY) {
+    console.error('GROQ_API_KEY não está configurada nas variáveis de ambiente.');
     res.status(500).json({ error: 'Chave da API não configurada no servidor. Verifique as Environment Variables na Vercel.' });
     return;
   }
 
-  // Garante que o corpo da requisição foi lido corretamente, mesmo se
-  // a Vercel não fizer o parse automático em algum cenário
   let body = req.body;
   if (typeof body === 'string') {
     try {
@@ -93,47 +91,55 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  const messages = body && body.messages;
-  if (!Array.isArray(messages) || messages.length === 0) {
+  const userMessages = body && body.messages;
+  if (!Array.isArray(userMessages) || userMessages.length === 0) {
     res.status(400).json({ error: 'Nenhuma mensagem recebida.' });
     return;
   }
 
+  // A Groq usa o mesmo formato da OpenAI: o "system prompt" entra como
+  // a primeira mensagem da lista, com role "system".
+  const groqMessages = [{ role: 'system', content: SYSTEM_PROMPT }].concat(
+    userMessages.map(function (m) {
+      return { role: m.role, content: m.content };
+    })
+  );
+
   try {
-    const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
+    const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
+        'Authorization': 'Bearer ' + process.env.GROQ_API_KEY,
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-5',
+        model: 'llama-3.3-70b-versatile',
         max_tokens: 1000,
-        system: SYSTEM_PROMPT,
-        messages: messages,
+        messages: groqMessages,
       }),
     });
 
-    const rawText = await anthropicResponse.text();
+    const rawText = await groqResponse.text();
     let data;
     try {
       data = JSON.parse(rawText);
     } catch (e) {
-      console.error('Resposta da Anthropic não era JSON válido:', rawText);
+      console.error('Resposta da Groq não era JSON válido:', rawText);
       res.status(502).json({ error: 'Resposta inesperada do servidor de IA. Tente novamente em instantes.' });
       return;
     }
 
-    if (!anthropicResponse.ok) {
-      console.error('Erro da API Anthropic:', data);
-      res.status(anthropicResponse.status).json({
+    if (!groqResponse.ok) {
+      console.error('Erro da API Groq:', data);
+      res.status(groqResponse.status).json({
         error: (data.error && data.error.message) || 'Erro ao conectar com o assistente',
       });
       return;
     }
 
-    res.status(200).json(data);
+    // Devolve no mesmo formato "content" que o front-end espera
+    const replyText = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+    res.status(200).json({ content: [{ type: 'text', text: replyText }] });
   } catch (err) {
     console.error('Erro inesperado na função /api/chat:', err);
     res.status(500).json({ error: 'Erro inesperado ao conectar com o assistente. Tente novamente.' });
