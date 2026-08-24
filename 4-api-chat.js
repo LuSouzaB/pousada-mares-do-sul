@@ -1,5 +1,5 @@
 // Função serverless — roda no servidor da Vercel, nunca no navegador.
-// A chave da API fica guardada em uma variável de ambiente (ANTHROPIC_API_KEY),
+// A chave fica guardada em uma variável de ambiente (AI_GATEWAY_API_KEY),
 // então nunca aparece no código que o visitante do site consegue ver.
 
 const SYSTEM_PROMPT = `# PAPEL
@@ -74,9 +74,9 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  // Confere se a chave da API está configurada nas variáveis de ambiente da Vercel
-  if (!process.env.GROQ_API_KEY) {
-    console.error('GROQ_API_KEY não está configurada nas variáveis de ambiente.');
+  // Confere se a chave do Vercel AI Gateway está configurada
+  if (!process.env.AI_GATEWAY_API_KEY) {
+    console.error('AI_GATEWAY_API_KEY não está configurada nas variáveis de ambiente.');
     res.status(500).json({ error: 'Chave da API não configurada no servidor. Verifique as Environment Variables na Vercel.' });
     return;
   }
@@ -97,41 +97,43 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  // A Groq usa o mesmo formato da OpenAI: o "system prompt" entra como
-  // a primeira mensagem da lista, com role "system".
-  const groqMessages = [{ role: 'system', content: SYSTEM_PROMPT }].concat(
+  // O Vercel AI Gateway usa formato compatível com OpenAI: o "system prompt"
+  // entra como a primeira mensagem da lista, com role "system".
+  const gatewayMessages = [{ role: 'system', content: SYSTEM_PROMPT }].concat(
     userMessages.map(function (m) {
       return { role: m.role, content: m.content };
     })
   );
 
   try {
-    const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const gatewayResponse = await fetch('https://ai-gateway.vercel.sh/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + process.env.GROQ_API_KEY,
+        'Authorization': 'Bearer ' + process.env.AI_GATEWAY_API_KEY,
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        // Formato "provedor/modelo" — usando um modelo gratuito da Groq
+        // através do Gateway. Pode trocar por outro provedor depois.
+        model: 'groq/llama-3.3-70b-versatile',
         max_tokens: 1000,
-        messages: groqMessages,
+        messages: gatewayMessages,
       }),
     });
 
-    const rawText = await groqResponse.text();
+    const rawText = await gatewayResponse.text();
     let data;
     try {
       data = JSON.parse(rawText);
     } catch (e) {
-      console.error('Resposta da Groq não era JSON válido:', rawText);
+      console.error('Resposta do AI Gateway não era JSON válido:', rawText);
       res.status(502).json({ error: 'Resposta inesperada do servidor de IA. Tente novamente em instantes.' });
       return;
     }
 
-    if (!groqResponse.ok) {
-      console.error('Erro da API Groq:', data);
-      res.status(groqResponse.status).json({
+    if (!gatewayResponse.ok) {
+      console.error('Erro do Vercel AI Gateway:', data);
+      res.status(gatewayResponse.status).json({
         error: (data.error && data.error.message) || 'Erro ao conectar com o assistente',
       });
       return;
