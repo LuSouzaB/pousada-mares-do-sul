@@ -7,17 +7,14 @@ feito para o projeto Guia Garopaba.
 
 - `index.html` — a interface de chat que o visitante vê
 - `api/chat.js` — função serverless que guarda a chave da API em segredo
-  (variável de ambiente `ANTHROPIC_API_KEY`) e conversa com o modelo
+  (variável de ambiente `AI_GATEWAY_API_KEY`) e conversa com o modelo
 
-## Passo 1 — Gerar a chave da API
+## Passo 1 — Gerar a chave do Vercel AI Gateway
 
-1. Crie uma conta em **console.anthropic.com** (e-mail ou Google).
-2. No menu lateral, clique em **API Keys** > **Create Key**. Dê um nome
-   (ex: `mares-do-sul`) e copie o código gerado (começa com `sk-ant-`) —
-   ele só aparece uma vez, guarde em um lugar seguro.
-3. Vá em **Billing** e cadastre um cartão. O uso é cobrado por conversa,
-   com valor bem baixo — dá para definir um limite mensal de gasto ali
-   mesmo.
+1. Dentro do seu projeto na Vercel, procure a seção **AI Gateway**.
+2. Clique em **Create API Key** (ou similar) e copie o código gerado.
+3. Essa chave já vem da própria Vercel — não precisa criar conta em
+   nenhum outro site.
 
 ## Passo 2 — Subir os arquivos no GitHub
 
@@ -35,7 +32,7 @@ feito para o projeto Guia Garopaba.
 2. Clique em **Add New > Project**, escolha o repositório que você criou
    e clique em **Import**.
 3. Antes de clicar em Deploy, abra **Environment Variables** e adicione:
-   - Nome: `ANTHROPIC_API_KEY`
+   - Nome: `AI_GATEWAY_API_KEY`
    - Valor: a chave gerada no Passo 1
 4. Clique em **Deploy**.
 5. Em alguns segundos você recebe um link público, tipo
@@ -53,7 +50,7 @@ configurada, não precisa mexer nela de novo.
 
 **"Erro ao conectar" ao testar o chat:**
 1. Confira em **Settings > Environment Variables** na Vercel se a
-   `ANTHROPIC_API_KEY` está lá, com o valor certo.
+   `AI_GATEWAY_API_KEY` está lá, com o valor certo.
 2. Se acabou de adicionar a chave, vá em **Deployments**, clique nos três
    pontinhos do deployment mais recente e escolha **Redeploy** — adicionar
    a chave depois do primeiro deploy não atualiza sozinho.
